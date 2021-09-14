@@ -1,0 +1,13 @@
+name: "RealEstate"
+navbar:
+  title: "Real Estate in Aarhus"
+left:
+  - text: "Home"
+href: index.html
+- text: "Journal"
+href: Journal.html
+- text: "Links"
+href: Links.html
+- text: "dash"
+href. dash.html
+output_dir: "docs"
