@@ -1,0 +1,579 @@
+---
+title: "Price Prediction for Condominiums in Aarhus C"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    theme:
+      version: 4
+      bg: "#ffffff" #baggrund?
+      fg: "#000000" #skrift farve (sort)
+      primary: "#BDD8DA"
+      navbar-bg: "#4F8A90" #øverste bjælke
+      base_font: 
+        google: Prompt
+      heading_font:
+        google: Sen
+      code_font:
+        google: 
+          # arguments to sass::font_google() 
+          family: JetBrains Mono
+          local: false
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(DT)
+```
+
+
+# Introduction
+
+
+## Column {.sidebar data-width=850 data-padding=10}
+
+<b>Executive Summary</b>
+
+In recent years, the prices of condominiums have skyrocketed, which has caused various problems for individuals that seek to find their new dream home. This pattern is also evident for the average square meter price in Aarhus C, leaving people with little to no option to know if a seller's proposition is fair. The motivation for this paper is to investigate feature importance and the behavior of the condominiums market in the central part of Aarhus. 
+
+The purpose is to build machine- and deep learning models with the objective of predicting a best guess for today's sales price given data from the period 2018-2021. This acts as an unbiased estimate for people, looking for a new condominium in the city center. In conclusion, the best three models developed in this paper are: Extreme Gradient Boosting with a MAE at 231,363 DKK, Random Forest with a MAE at 224,218 DKK, and a superior Neural Network model with a MAE as low at 19,522 DKK. Thus, by utilizing the latter model, it is possible to obtain a reliable second opinion.
+
+<b>The data collection process</b>
+
+  <br><img src="data collection process.png"
+       alt="Markdown Monster icon"
+       class="center"
+       width="350" 
+       height="230s"
+       style="float: left; margin-right: 10px;" /></br>
+
+
+
+
+## Row {data-width=500}
+
+
+### <b>Sales and supply of housing in Aarhus C</b>
+
+```{r}
+library(readxl)
+setwd("~/Desktop/Dash board")
+SaleSupply <- read_excel("data/Makro data Århus C copy.xlsx", 
+    sheet = "Ark1")
+
+names(SaleSupply)[names(SaleSupply) == "Number of condominiums sold"] <- "Condominiums Sold"
+names(SaleSupply)[names(SaleSupply) == "Number of condominiums for sale (ultimo)"] <- "Condominiums for Sale"
+
+
+SaleSupply$...1 <- gsub("K2",".25", SaleSupply$...1)
+SaleSupply$...1 <- gsub("K3",".50", SaleSupply$...1)
+SaleSupply$...1 <- gsub("K4",".75", SaleSupply$...1)
+
+SaleSupply$...1 <- as.numeric(SaleSupply$...1)
+
+library(dygraphs)
+dygraph(SaleSupply[1:3]) %>% 
+  dyRangeSelector(dateWindow = c("2004", "2021"), fillColor = "#74999C", strokeColor="#74999C") %>% 
+  dyLegend(show = "follow", labelsSeparateLines = TRUE) %>%
+  dyOptions(colors = c("#27666C","#B2753F"), drawGrid = FALSE) %>%
+  dyHighlight(highlightSeriesOpts = list(strokeWidth = 3))
+```
+
+
+## Row {data-width=500}
+
+### <b>Average Sqaure Meter Price</b>
+```{r}
+library(readxl)
+m2pris <- read_excel("data/m2pris.xlsx")
+
+m2pris$...1 <- gsub("K2",".25", m2pris$...1)
+m2pris$...1 <- gsub("K3",".50", m2pris$...1)
+m2pris$...1 <- gsub("K4",".75", m2pris$...1)
+
+m2pris$...1 <- as.numeric(m2pris$...1)
+
+
+library(dygraphs)
+dygraph(m2pris[c(1,2,3,4,6)]) %>% 
+  dyRangeSelector(dateWindow = c("1992", "2021"), fillColor = "#74999C", strokeColor="#74999C") %>% 
+  dyLegend(show = "follow", labelsSeparateLines = TRUE) %>%
+  dyOptions(colors = c("#B2753F","#CE8D68", "#74999C", "#7DA89C"), drawGrid = FALSE) %>%
+  dyHighlight(highlightSeriesOpts = list(strokeWidth = 3))
+```
+
+
+
+
+
+
+
+
+# Data Overview
+
+
+## Row {data-height=150}
+
+### Number of condominiums
+```{r}
+library(readxl)
+library(flexdashboard)
+RealEstate2_rigtig <- read_excel("data/RealEstate2 rigtig.xlsx")
+
+NOF <- paste('',formatC(dim(RealEstate2_rigtig)[1], big.mark=',', format = 'fg'))
+flexdashboard::valueBox(NOF, caption ="Condominiums")
+
+        
+```
+
+### Average Sales Price
+```{r}
+ASP_DKK <- paste('DKK',formatC(round(mean(RealEstate2_rigtig$SalesPrice),digits = 0), big.mark=',', format = 'fg'))
+flexdashboard::valueBox(ASP_DKK, icon = "", caption = "Average Sales Price")
+
+```
+
+### Average Square Meter Price
+```{r}
+ASMP_DKK <- paste('DKK', format(round(mean(RealEstate2_rigtig$PriceSqM), digits = 0), big.mark=',', format='fg'))
+flexdashboard::valueBox(ASMP_DKK, icon = "", caption = "Average Square Meter Price")
+
+```
+
+
+### Average Square Meter 
+```{r}
+flexdashboard::valueBox(round(mean(RealEstate2_rigtig$SqM), digits = 0), icon = "")
+```
+
+### Average Condominium Age
+```{r}
+flexdashboard::valueBox(round(mean(RealEstate2_rigtig$ConsAge), digits=0))
+```
+
+### Average Number of Rooms
+```{r}
+flexdashboard::valueBox(round(mean(RealEstate2_rigtig$No.Rooms), digits=0))
+```
+
+### Average Number of Toilets
+```{r}
+flexdashboard::valueBox(round(mean(RealEstate2_rigtig$No.Toilets), digits=0))
+```
+
+### Average Number of Bathrooms
+```{r}
+flexdashboard::valueBox(round(mean(RealEstate2_rigtig$No.Bathrooms), digits=0))
+```
+
+
+
+
+
+## Row {data-height=150}
+
+### Average Distance to Citizen Serivce 
+```{r}
+RealEstate2_rigtig$DistCitizenService <- as.numeric(RealEstate2_rigtig$DistCitizenService) 
+gauge(round(mean(RealEstate2_rigtig$DistCitizenService), digits=0), 
+      min=min(RealEstate2_rigtig$DistCitizenService), 
+      max=max(RealEstate2_rigtig$DistCitizenService),
+      symbol = "",
+        gaugeSectors(succes=c(0,500),
+                   warning=c(501,1500),
+                   danger=c(1501,3000),
+                    colors = c("#BDD8DA")))
+```
+
+### Average Distance to Main Station
+```{r}
+RealEstate2_rigtig$DistMainStation <- as.numeric(RealEstate2_rigtig$DistMainStation) 
+gauge(round(mean(RealEstate2_rigtig$DistMainStation), digits=0), 
+      min=min(RealEstate2_rigtig$DistMainStation), 
+      max=max(RealEstate2_rigtig$DistMainStation),
+        gaugeSectors(succes=c(0,500),
+                   warning=c(501,1500),
+                   danger=c(1501,3000),
+                   colors = c("#BDD8DA")))
+```
+
+### Average Distance to City Center
+```{r}
+RealEstate2_rigtig$DistCentrum <- as.numeric(RealEstate2_rigtig$DistCentrum) 
+gauge(round(mean(RealEstate2_rigtig$DistCentrum), digits=0), 
+      min=min(RealEstate2_rigtig$DistCentrum), 
+      max=max(RealEstate2_rigtig$DistCentrum),
+        gaugeSectors(succes=c(0,500),
+                   warning=c(501,1500),
+                   danger=c(1501,3000),
+                   colors = c("#BDD8DA")))
+```
+
+### Average Distance to Coastline
+```{r}
+RealEstate2_rigtig$DistCoastline <- as.numeric(RealEstate2_rigtig$DistCoastline) 
+gauge(round(mean(RealEstate2_rigtig$DistCoastline), digits=0), 
+      min=min(RealEstate2_rigtig$DistCoastline), 
+      max=max(RealEstate2_rigtig$DistCoastline),
+      gaugeSectors(succes=c(0,500),
+                   warning=c(501,1500),
+                   danger=c(1501,3000),
+                   colors = c("#BDD8DA")))
+```
+
+
+
+
+
+## Row {data-height=700}
+
+### <b>Locations</b>
+```{r}
+
+library(readxl)
+RealEstate <- read_excel("data/RealEstate-kopi.xlsx", 
+    sheet = "Sheet1 (2)")
+
+library(devtools)
+#devtools::install_github("rstudio/leaflet")
+library(leaflet)
+
+
+m <- leaflet() %>%
+  addTiles(urlTemplate = "http://{s}.tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png", 
+       attribution = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>%  # Add default OpenStreetMap map tiles
+  addMarkers(lng=RealEstate$wgs84koordinat_længde, 
+             lat=RealEstate$wgs84koordinat_bredde, 
+             popup=RealEstate$Address,  
+             clusterOptions = markerClusterOptions(freezeAtZoom=)) %>% 
+  addProviderTiles(providers$CartoDB.Positron)  
+
+m
+```
+
+
+
+### <b>Condominium Areas</b>
+```{r}
+library(plotly)
+library(readxl)
+RealEstate2_rigtig <- read_excel("data/RealEstate2 rigtig.xlsx")
+
+RealEstate2_rigtig$Area <- ifelse(RealEstate2_rigtig$Area==1, "Ceresbyen", 
+                                  ifelse(RealEstate2_rigtig$Area==2, "Frederiksbjerg",
+                                         ifelse(RealEstate2_rigtig$Area==3, "Indre by",
+                                                ifelse(RealEstate2_rigtig$Area==4, "Langenæs",
+                                                       ifelse(RealEstate2_rigtig$Area==5, "Latinerkvarteret",
+                                                              ifelse(RealEstate2_rigtig$Area==6, "Marselisborg",
+                                                                     ifelse(RealEstate2_rigtig$Area==7, "Trøjborg",
+                                                                            ifelse(RealEstate2_rigtig$Area==8, "Vesterbro",
+                                                                                    ifelse(RealEstate2_rigtig$Area==9, "Øgadekvarteret",
+                                                                                            ifelse(RealEstate2_rigtig$Area==10, "Aarhus Ø",""))))))))))
+
+RealEstate2_rigtig$Area <- as.factor(RealEstate2_rigtig$Area)
+
+
+test <- as.data.frame(table(RealEstate2_rigtig$Area))
+data <- test[,c('Var1', 'Freq')]
+
+colors <- c('#BDD8DA', '#95BDC1', '#6DA0A5', '#4F8A90', '#35787E', '#829698', '#6A7677', '#798081', '#5A696B', '#4C6062')
+
+fig <- plot_ly(data, labels = ~Var1, values = ~Freq, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        text = ~paste(Freq, ' condominiums in', Var1),
+        marker = list(colors = colors,
+                      line = list(color = '#FFFFFF', width = 1)),
+                      #The 'pull' attribute can also be used to create space between the sectors
+        showlegend = TRUE)
+fig <- fig %>% layout(title = '',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+
+
+
+
+```
+
+
+### <b>Energy Labels</b>
+```{r}
+library(plotly)
+library(readxl)
+RealEstate2_rigtig <- read_excel("data/RealEstate2 rigtig.xlsx")
+
+RealEstate2_rigtig$EnergyLabel <- ifelse(RealEstate2_rigtig$EnergyLabel==1, "F&G", 
+                                  ifelse(RealEstate2_rigtig$EnergyLabel==2, "E",
+                                         ifelse(RealEstate2_rigtig$EnergyLabel==3, "D",
+                                                ifelse(RealEstate2_rigtig$EnergyLabel==4, "C",
+                                                       ifelse(RealEstate2_rigtig$EnergyLabel==5, "B",
+                                                              ifelse(RealEstate2_rigtig$EnergyLabel==6, "A2010 & A2",
+                                                                     ifelse(RealEstate2_rigtig$EnergyLabel==7, "A2015",
+                                                                            ifelse(RealEstate2_rigtig$EnergyLabel==8, "A2020","F&G"))))))))
+
+RealEstate2_rigtig$EnergyLabel <- as.factor(RealEstate2_rigtig$EnergyLabel)
+
+
+energy <- as.data.frame(table(RealEstate2_rigtig$EnergyLabel))
+data2 <- energy[,c('Var1', 'Freq')]
+
+colors <- c('#BDD8DA', '#95BDC1', '#6DA0A5', '#4F8A90', '#35787E', '#829698', '#6A7677', '#798081', '#5A696B', '#4C6062')
+
+fig2 <- plot_ly(data2, labels = ~Var1, values = ~Freq, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        text = ~paste(Freq, ' condominiums with Energy Label', Var1),
+        marker = list(colors = colors,
+                      line = list(color = '#FFFFFF', width = 1)),
+                      #The 'pull' attribute can also be used to create space between the sectors
+        showlegend = TRUE)
+fig2 <- fig2 %>% layout(title = '', 
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig2
+
+```
+
+
+# Neural Network
+
+## Row {data-height=400}
+
+### <b>Deep Learning and a Neural Network for Regression</b>
+We build a neural network script with hidden layers activated by the “relu” activation function. It determines whether a node (unit) gets activated and is therefore used in the next layer. The output layer does not have an activation function due to the interest in predicting a sales price. Thus, the output layer only has one unit. We use our script to tune our hyperparameters automatically based on empirical learning by testing the following 27 combinations using batch = c(1, 2, 3), layers = c(2, 3, 4), and units = c(32, 64, 128). We find the best validation model consisting of 3 batches, 4 layers, and 64 units.
+
+We find that the deep learning model is distinctively outperforming other regression models. Our neural network has a 48,383 RMSE and deviates as low as 19,522 DKK in average. This has allowed us to beat the project baseline by 93,6% and predict a sales price very close to the actual sales price in the period.
+
+
+
+## Row {data-height=600}
+
+```{r}
+library(readxl)
+library(dplyr)
+library(keras)
+
+RE.train <- read_excel("~/Desktop/BSS/Business Intelligence (Cand.Merc)/2. semester/Data Science Project/Price prediction Aarhus/Data Aarhus /RE.train.xlsx") # 70% of all data
+RE.train[, c(2,9,13:21)] <- lapply(RE.train[, c(2,9,13:21)], as.numeric)
+
+RE.valid <- read_excel("~/Desktop/BSS/Business Intelligence (Cand.Merc)/2. semester/Data Science Project/Price prediction Aarhus/Data Aarhus /RE.valid.xlsx") #15% of all data
+RE.valid[, c(2,9,13:21)] <- lapply(RE.valid[, c(2,9,13:21)], as.numeric)
+
+RE.test <- read_excel("~/Desktop/BSS/Business Intelligence (Cand.Merc)/2. semester/Data Science Project/Price prediction Aarhus/Data Aarhus /RE.test.xlsx") # 15% of all data
+RE.test[, c(2,9,13:21)] <- lapply(RE.test[, c(2,9,13:21)], as.numeric)
+
+# specifying target measures Y (SalesPrice)
+RE.train.Y <- RE.train$SalesPrice
+RE.valid.Y <- RE.valid$SalesPrice
+RE.test.Y <- RE.test$SalesPrice
+
+## normalizing our data to the same scale)
+mean <- apply(RE.train, 2, mean)
+std <- apply(RE.train, 2, sd)
+RE.train <- scale(RE.train, center = mean, scale = std)
+RE.valid <- scale(RE.valid, center = mean, scale = std)
+RE.test <- scale(RE.test, center = mean, scale = std)
+
+## building the model ## 
+build_model <- function() {
+  model <- keras_model_sequential() %>% 
+    layer_dense(units = 64, activation = "relu", 
+                input_shape = dim(RE.train)[2]) %>% 
+    layer_dense(units = 64, activation = "relu") %>%
+    layer_dense(units = 64, activation = "relu") %>%
+    layer_dense(units = 1) # only interested in one output, scalar value
+  
+  model %>% compile(
+    optimizer = "rmsprop", # learning parameter
+    loss = "mse",          # loss function MSE
+    metrics = c("mae")
+  )
+}
+
+# Build the Keras model (already compiled)
+model <- build_model()
+
+# history <- model %>% fit(RE.train, RE.train.Y,
+#              epochs = 49, batch_size = 3, 
+#              validation_data = list(RE.valid, RE.valid.Y),
+#              verbose = 0)
+# plot(history)
+
+#tensorboard("logs/run_a")
+
+model %>% fit(RE.train, RE.train.Y,
+                     validation_data = list(RE.valid, RE.valid.Y),
+                     epochs = 49, 
+                     batch_size = 3, 
+                     verbose = 0)
+
+
+`````
+
+
+### <b>Loss Learning Curve</b>
+```{r}
+
+# libraries:
+library(ggplot2)
+library(gganimate)
+library(babynames)
+library(hrbrthemes)
+library(viridis)
+library(tidyverse)
+library(gapminder)
+library(gifski)
+
+library(readxl)
+run_train_tag_epoch_loss <- read_excel("data/run-train-tag-epoch_mae.xlsx", 
+    sheet = "loss")
+
+run_train_tag_epoch_loss$Value <- as.integer(run_train_tag_epoch_loss$Value )
+run_train_tag_epoch_loss <- as.data.frame(run_train_tag_epoch_loss)
+run_train_tag_epoch_loss <- rename(run_train_tag_epoch_loss, Epochs = Step)
+
+
+# Plot
+plot2 <- run_train_tag_epoch_loss %>%
+  ggplot( aes(x=Epochs, y=Value, group=Data, color=Data)) +
+    geom_line(size=2) +
+    geom_point() +
+    scale_color_manual(values=c("#27666C", "#B2753F")) +
+    ggtitle("") +
+    theme_ipsum() +
+    ylab("Loss") +
+    transition_reveal(Epochs) +
+    theme_minimal(base_size=24)
+
+
+# Save at gif:
+animate(plot2, duration = 20, fps = 20, width = 900, height = 600, renderer = gifski_renderer())
+anim_save("output.gif2")
+
+``````
+
+
+### <b>MAE Learning Curve</b>
+```{r}
+library(readxl)
+run_train_tag_epoch_mae <- read_excel("data/run-train-tag-epoch_mae.xlsx", 
+    sheet = "Sheet1")
+
+run_train_tag_epoch_mae$Value <- as.integer(run_train_tag_epoch_mae$Value )
+run_train_tag_epoch_mae <- as.data.frame(run_train_tag_epoch_mae)
+run_train_tag_epoch_mae <- rename(run_train_tag_epoch_mae, Epochs = Step)
+
+
+# Plot
+plot123 <- run_train_tag_epoch_mae %>%
+  ggplot( aes(x=Epochs, y=Value, group=Data, color=Data)) +
+    geom_line(size=2) +
+    geom_point() +
+    scale_color_manual(values=c("#27666C", "#B2753F")) +
+    ggtitle("") +
+    theme_ipsum() +
+    ylab("Mean Absolutte Error (DKK)") +
+    transition_reveal(Epochs) +
+    theme_minimal(base_size=24)
+
+
+# Save at gif:
+animate(plot123, duration = 20, fps = 20, width = 900, height = 600, renderer = gifski_renderer())
+anim_save("output.gif")
+
+`````
+
+### <b>Deviation in Final Sales Price Prediction</b>
+```{r}
+### RUNNING ON TEST SET ###
+#pred_test <- model %>% predict(RE.test)
+#df_test <- as.data.frame(cbind(pred_test,RE.test.Y)) 
+# run RE.test above again to be able to match the data.frame
+
+#result <- model %>% evaluate(RE.test, RE.test.Y)
+
+#library("writexl")
+#write_xlsx(df_test,"~/Desktop/Dash board.xlsx")
+
+
+### PLOT DATA
+#library(readxl)
+#Prediction <- read_excel("data/Prediction.xlsx")
+#Prediction <- rename(Prediction, CondominiumID=Number1)
+#Prediction <- rename(Prediction, SalesPrice=Value)
+#Prediction <- as.data.frame(Prediction)
+#Prediction$SalesPrice <- as.integer(Prediction$SalesPrice)
+
+# Plot
+#plot3 <- Prediction %>%
+  #ggplot(aes(x=CondominiumID, y=SalesPrice, group=Data, color=Data)) +
+   # geom_line(size=2) +
+    #geom_point() +
+   # scale_color_manual(values=c("#27666C", "#B2753F")) +
+   # ggtitle("") +
+   # theme_ipsum() +
+   # ylab("Sales Price") +
+   # transition_reveal(CondominiumID) +
+    #theme_minimal(base_size=24)
+
+
+# Save at gif:
+#animate(plot3, duration = 20, fps = 20, width = 900, height = 600, renderer = gifski_renderer())
+#anim_save("output.gif3")
+
+
+library(readxl)
+pred <- read_excel("data/Dash board.xlsx")
+
+pred <- dplyr::mutate(pred, CondominiumID = row_number())
+pred$Deviation <- (pred$V1 - pred$RE.test.Y)
+
+plot3 <- pred %>%
+  ggplot(aes(x=CondominiumID, y=Deviation)) +
+    geom_line(size=2, color="#B2753F") +
+    geom_point() +
+    ggtitle("") +
+    theme_ipsum() +
+    ylab("Deviation (DKK)") +
+    transition_reveal(CondominiumID) +
+    theme_minimal(base_size=24)
+
+# Save at gif:
+animate(plot3, duration = 20, fps = 20, width = 900, height = 600, renderer = gifski_renderer())
+anim_save("output.gif3")
+
+`````
+
+
+
+
+
+# Data
+```{r}
+library(flexdashboard)
+library(DT)
+
+datatable(
+  RealEstate2_rigtig,
+  extensions = 'Buttons', options = list(
+    dom = 'Bfrtip',
+    buttons = 
+      list('copy', 'print', list(
+        extend = 'collection',
+        buttons = c('csv', 'excel', 'pdf'),
+        text = 'Download'
+      ))
+    
+  )
+)
+```
+
+
+rmarkdown::render("report dashboard.Rmd")
